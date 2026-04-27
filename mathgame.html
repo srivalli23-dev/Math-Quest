@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Math Quest</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #ff9a9e, #fad0c4, #fbc2eb, #a6c1ee);
+      background-size: 400% 400%;
+      animation: gradientBG 12s ease infinite;
+      color: #fff;
+      text-align: center;
+    }
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    h1 {
+      font-size: 55px;
+      margin-top: 20px;
+      color: #ffeb3b;
+      text-shadow: 3px 3px 10px black;
+    }
+    button {
+      font-size: 28px;
+      padding: 15px 40px;
+      margin: 20px;
+      border: none;
+      border-radius: 15px;
+      background: linear-gradient(90deg, #ff512f, #dd2476);
+      color: white;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.15);
+    }
+    #startScreen, #gameScreen, #endScreen {
+      display: none;
+      padding: 20px;
+    }
+    #playerName, #playerAge, #level {
+      font-size: 22px;
+      padding: 10px;
+      margin: 10px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+    }
+    #gameArea {
+      position: relative;
+      width: 600px;
+      height: 400px;
+      margin: 20px auto;
+      background: rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      border: 3px solid #fff;
+      border-radius: 15px;
+    }
+    .equation {
+      position: absolute;
+      top: 0;
+      font-size: 22px;
+      font-weight: bold;
+      color: #ffeb3b;
+      text-shadow: 2px 2px 5px black;
+    }
+    /* Grass at the bottom */
+    #grass {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 40px;
+      background: linear-gradient(to top, #228B22, #32CD32);
+      border-top: 3px solid #145214;
+    }
+    #answerInput {
+      margin-top: 10px;
+      font-size: 22px;
+      padding: 10px;
+      width: 240px;
+      text-align: center;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+    #score, #lastScore {
+      font-size: 26px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Start screen -->
+  <div id="startScreen">
+    <h1>✨ Math Quest ✨</h1>
+    <input type="text" id="playerName" placeholder="Enter your name"><br>
+    <input type="number" id="playerAge" placeholder="Enter your age"><br>
+    <select id="level">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select><br><br>
+    <button onclick="startGame()">🚀 Start Game</button>
+  </div>
+
+  <!-- Game screen -->
+  <div id="gameScreen">
+    <h2 id="greeting"></h2>
+    <div id="score">Score: 0</div>
+    <div id="lastScore"></div>
+    <div id="gameArea">
+      <div id="grass"></div>
+    </div>
+    <input type="text" id="answerInput" placeholder="Type answer & press Enter" autofocus>
+    <br>
+    <button onclick="quitGame()">❌ Quit</button>
+  </div>
+
+  <!-- End screen -->
+  <div id="endScreen">
+    <h2>Game Over!</h2>
+    <p id="finalScore"></p>
+    <button onclick="location.reload()">🔄 Play Again</button>
+  </div>
+
+  <!-- Sounds -->
+  <audio id="correctSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+  <audio id="wrongSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+
+  <script>
+    let playerName = "";
+    let playerAge = 0;
+    let score = 0;
+    let lastScore = 0;
+    let gameInterval;
+    let equations = [];
+    let fallSpeed = 1;
+    let spawnRate = 3000;
+
+    const startScreen = document.getElementById("startScreen");
+    const gameScreen = document.getElementById("gameScreen");
+    const endScreen = document.getElementById("endScreen");
+    const gameArea = document.getElementById("gameArea");
+    const scoreEl = document.getElementById("score");
+    const lastScoreEl = document.getElementById("lastScore");
+    const answerInput = document.getElementById("answerInput");
+
+    startScreen.style.display = "block";
+
+    function startGame() {
+      playerName = document.getElementById("playerName").value;
+      playerAge = parseInt(document.getElementById("playerAge").value);
+      let level = document.getElementById("level").value;
+
+      if (!playerName || !playerAge) {
+        alert("Please enter name and age!");
+        return;
+      }
+
+      if (level === "easy") { fallSpeed = 1; spawnRate = 3500; }
+      if (level === "medium") { fallSpeed = 1.5; spawnRate = 2500; }
+      if (level === "hard") { fallSpeed = 2; spawnRate = 1500; }
+
+      startScreen.style.display = "none";
+      gameScreen.style.display = "block";
+      document.getElementById("greeting").textContent = `Good luck, ${playerName}!`;
+
+      gameInterval = setInterval(spawnEquation, spawnRate);
+      requestAnimationFrame(updateGame);
+
+      answerInput.focus();
+    }
+
+    function spawnEquation() {
+      const eq = document.createElement("div");
+      eq.classList.add("equation");
+
+      let a, b, op;
+      if (playerAge <= 7) {
+        a = Math.floor(Math.random() * 10) + 1;
+        b = Math.floor(Math.random() * 10) + 1;
+        op = Math.random() > 0.5 ? "+" : "-";
+      } else if (playerAge <= 12) {
+        a = Math.floor(Math.random() * 12) + 1;
+        b = Math.floor(Math.random() * 12) + 1;
+        op = Math.random() > 0.5 ? "*" : "+";
+      } else {
+        a = Math.floor(Math.random() * 20) + 1;
+        b = Math.floor(Math.random() * 20) + 1;
+        op = ["+", "-", "*", "/"][Math.floor(Math.random() * 4)];
+        if (op === "/" && a % b !== 0) { a = a * b; }
+      }
+
+      eq.textContent = `${a} ${op} ${b}`;
+      eq.dataset.answer = eval(`${a}${op}${b}`);
+      eq.style.left = Math.random() * (gameArea.clientWidth - 50) + "px";
+      eq.style.top = "0px";
+      gameArea.appendChild(eq);
+      equations.push(eq);
+    }
+
+    function updateGame() {
+      equations.forEach((eq, i) => {
+        let y = parseInt(eq.style.top);
+        y += fallSpeed;
+        eq.style.top = y + "px";
+
+        if (y > gameArea.clientHeight - 60) { // hits grass
+          if (gameArea.contains(eq)) gameArea.removeChild(eq);
+          equations.splice(i, 1);
+          score -= 10;
+          if (score < 0) score = 0;
+          document.getElementById("wrongSound").play();
+          updateScore();
+        }
+      });
+
+      requestAnimationFrame(updateGame);
+    }
+
+    function updateScore() {
+      scoreEl.textContent = "Score: " + score;
+      lastScoreEl.textContent = "Last Score: " + lastScore;
+    }
+
+    answerInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        let val = parseInt(answerInput.value);
+        let answered = false;
+        equations.forEach((eq, i) => {
+          if (parseInt(eq.dataset.answer) === val) {
+            score += 20;
+            updateScore();
+            document.getElementById("correctSound").play();
+            if (gameArea.contains(eq)) gameArea.removeChild(eq);
+            equations.splice(i, 1);
+            answered = true;
+          }
+        });
+        if (!answered) {
+          score -= 10;
+          if (score < 0) score = 0;
+          updateScore();
+          document.getElementById("wrongSound").play();
+        }
+        answerInput.value = "";
+      }
+    });
+
+    function quitGame() {
+      endGame();
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      gameScreen.style.display = "none";
+      endScreen.style.display = "block";
+      document.getElementById("finalScore").textContent =
+        `${playerName} (${playerAge}) - Final Score: ${score}`;
+      lastScore = score;
+    }
+
+    setTimeout(endGame, 90000);
+  </script>
+</body>
+</html>
